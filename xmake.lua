@@ -8,6 +8,13 @@ toolchain("v831-toolchain")
     set_sdkdir("/opt/v83x_linux_x86_python3.8_toolchain/toolchain-sunxi-musl/toolchain")
 toolchain_end()
 
+--v831工具链()
+--命令：xmake f -v -p linux -a armv7 --toolchain=v831-toolchain --cross=arm-openwrt-linux-muslgnueabi-
+toolchain("v85x-toolchain")
+    set_kind("standalone")
+    set_sdkdir("toolchain-sunxi-musl/toolchain")
+toolchain_end()
+
 -- 编译模式 --
 -- 模式切换：xmake f -m debug/release
 add_rules("mode.debug", "mode.release")

@@ -36,7 +36,7 @@
 - 构建项目：`xmake build`
   - 构建生成的文件位于  `Build/linux/<Arch>/<Mode>`目录下
 - 切换构建模式：`xmake -m <debug/release>`
-- 切换V831工具链：`xmake f -p linux -a armv7 --toolchain=v831-toolchain --cross=arm-openwrt-linux-muslgnueabi-`
+- 切换V85x工具链：`xmake f -p linux -a armv7 --toolchain=v85x-toolchain --cross=arm-openwrt-linux-muslgnueabi-`
 - 恢复初始化配置(工具链、构建模式):`xmake f -c`
 
 ### 2、使用CppCheck
