@@ -1,0 +1,9 @@
+{
+    "cpp-check-lint.--enable": true,
+    "cpp-check-lint.cppcheck.--std_c++=": "c++17",
+    "cpp-check-lint.cppcheck.--std_c=": "c99",
+    "github.copilot.advanced": {
+
+    },
+    "cmake.options.statusBarVisibility": "hidden"
+}
