@@ -34,4 +34,4 @@
 # 构建文件
 build/
 .xmake/
-toolchain-sunxi-musl
+toolchain
