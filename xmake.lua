@@ -1,11 +1,11 @@
 set_project("CPP_Xmake_Env_Template")
 set_languages("c99", "cxx17")
 
---armv7 v83x v85x 工具链()
+--配置 armv7 v83x v85x 工具链，恢复本机编译用 xmake f -c -y 
 --命令：xmake f -v -y -p linux -a armv7 --toolchain=armv7-toolchain --cross=arm-openwrt-linux-muslgnueabi-
 toolchain("armv7-toolchain")
     set_kind("standalone")
-    set_sdkdir(string.format("%s/toolchain", os.getenv("PWD")))
+    set_sdkdir(string.format("%s/armv7-toolchain/toolchain", os.getenv("PWD")))
 toolchain_end()
 
 -- 编译模式 --
