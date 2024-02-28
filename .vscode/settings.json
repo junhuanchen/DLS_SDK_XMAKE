@@ -5,5 +5,10 @@
     "github.copilot.advanced": {
 
     },
-    "cmake.options.statusBarVisibility": "hidden"
+    "cmake.options.statusBarVisibility": "hidden",
+    "files.associations": {
+        "yefiot.h": "c",
+        "debug.h": "c",
+        "iostream": "cpp"
+    }
 }

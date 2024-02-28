@@ -3,7 +3,7 @@ add_rules("mode.debug", "mode.release")
 target("demo")
     set_kind("binary")
     add_deps("components")
-    -- add_files("src/*.cpp")
+    add_files("src/*.cpp")
     add_files("src/*.c")
     add_packages("sqlite3")
 --
