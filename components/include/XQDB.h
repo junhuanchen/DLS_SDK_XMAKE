@@ -4,7 +4,7 @@
 #include "sqlite3.h"
 #include <list>
 #include <string>
-// #include "XQDB.h"
+#include "XQDB.h"
 
 typedef struct _user_data //doorphone t_card
 {
@@ -26,7 +26,8 @@ typedef struct _record_data //doorphone t_record
 class XQDB
 {
 public:
-    XQDB(std::string DBfile, std::string RecordDBfile = "");
+    // XQDB(std::string DBfile, std::string RecordDBfile = "");
+    XQDB();
     virtual ~XQDB();
 
 private:
@@ -57,6 +58,7 @@ public:
     int GetFingerNum();
     //--------------user_table---------------
     bool GetItemByUserId(int user_id, std::list<user_data> &p_user_datas);
+    bool GetItemByFingerId(int finger_id, std::list<user_data> &p_user_datas);
     int GetMaxUserId();   
     int insertData(char * data);
     int UpdateData(char * data);
@@ -64,9 +66,9 @@ public:
     int DeleteUserByUserid(int user_id);
     int GetItemList(int size,int offset,char * condition,std::list<user_data> &p_user_datas);
 
-    int UpdateCard(int user_id,uint32_t card_num);
-    int GetUseridByCard(uint32_t card,int &usr_id);
-    int GetCardByUserId(int user_id,uint32_t &card);
+    int UpdateCard(int user_id,char* card_num);
+    int GetUseridByCard(char* card,int &usr_id);
+    int GetCardByUserId(int user_id,const char *card);
 
     int UpdateFinger(int user_id,int finger_id);
     int GetMaxFingerId();
@@ -75,6 +77,8 @@ public:
     //-----------record_table----------------
     int insertRecord(char * data);
     int DeleteAllRecord();
+
+    void ReOpenDB();
 };
 
 #endif

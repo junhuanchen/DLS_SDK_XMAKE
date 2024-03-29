@@ -208,7 +208,6 @@ void linux_uart_deinit(int fd)
     else
         fd = -1;
 }
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

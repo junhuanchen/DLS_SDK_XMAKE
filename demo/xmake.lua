@@ -4,8 +4,10 @@ target("demo")
     set_kind("binary")
     add_deps("components")
     add_files("src/*.cpp")
-    add_files("src/*.c")
+    -- add_files("src/*.c")
     add_packages("sqlite3")
+    -- add_links("sqlite3")
+    -- add_linkdirs("usr/lib/sqlite3")
 --
 -- If you want to known more usage about xmake, please see https://xmake.io
 --

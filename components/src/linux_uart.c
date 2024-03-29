@@ -74,6 +74,7 @@ struct _ts_
 {
     struct timeval timeout;
     int dev_ttyS;
+    int input_event0;
     fd_set readfd;
     struct pack_t
     {
@@ -97,6 +98,8 @@ int linux_uart_load()
         .parity = 'n'};
 
     self->dev_ttyS = linux_uart_init((char *)"/dev/ttyUSB0", &uart_dev_parm);
+    // self->dev_ttyS = linux_uart_init((char *)"/dev/ttyS2", &uart_dev_parm);
+    printf("self->dev_ttyS:%d\n",self->dev_ttyS);
     if (self->dev_ttyS < 0)
     {
       perror(" uart /dev/ttyUSB0 open err!");
