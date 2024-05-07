@@ -35,3 +35,4 @@
 build/
 .xmake/
 armv7-toolchain
+.vscode
