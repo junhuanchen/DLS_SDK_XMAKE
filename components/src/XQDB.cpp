@@ -103,7 +103,19 @@ int XQDB::createTables()
         printf("Create user table error ret:%d, %s\n", ret, errMsg);
         // return -2;
     }
-    
+    //用户表t_plamer
+    const char *tb_palm_sql_create =
+        "CREATE TABLE tb_plamer_data ("
+        "user_id INTEGER NOT NULL UNIQUE,"         //   用户设备内的编号
+        "card_num     VARCHAR NOT NULL DEFAULT '',"            //  
+        "palmer_id     INTEGER"           //   
+        ");";
+    ret = sqlite3_exec(m_db, tb_palm_sql_create, NULL, NULL, &errMsg);
+    if (SQLITE_OK != ret)
+    {
+        printf("Create user table error ret:%d, %s\n", ret, errMsg);
+        // return -2;
+    }
     //进出记录表t_record
     const char *t_record_sql_create =       
         "CREATE TABLE t_record_data ("

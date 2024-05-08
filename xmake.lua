@@ -13,7 +13,7 @@ toolchain_end()
 add_rules("mode.debug", "mode.release")
 
 add_requires("sqlite3")
-
+-- add_requires("inet")
 -- 程序检查工具 --
 -- 命令：xmake f -m debug -v --policies=build.sanitizer.address,build.sanitizer.undefined
 --     set_policy("build.sanitizer.address", true) --快速的内存错误检测工具

@@ -6,6 +6,7 @@ target("demo")
     add_files("src/*.cpp")
     -- add_files("src/*.c")
     add_packages("sqlite3")
+    -- add_links("inet")
     -- add_links("sqlite3")
     -- add_linkdirs("usr/lib/sqlite3")
 --

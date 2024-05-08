@@ -37,6 +37,7 @@ public:
 	int add_user(int user_id);
 	int del_user(int user_id = -1);
 	int add_user_by_finger(int userid,int fingerid);
+	int add_user_by_card(int user_id,char *cardnum);
 	void restore_init();
 	void add_record(int user_id,int access_type,int record_time);
 

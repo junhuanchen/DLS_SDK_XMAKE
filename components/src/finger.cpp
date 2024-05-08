@@ -143,11 +143,11 @@ int finger::SendToUart(uint8_t confir,uint8_t flag, uint8_t* body, uint16_t len,
 		memcpy(&buf[sizeof(UartHead)], body, len);
 	}
     *((uint16_t*)&buf[pkg_len - 2]) = ntohs(this->get_chk(&buf[6], len + 4)) ;//len+4 flag+headlen4字节
-	// printf("\n-----*******send*******-------\n");
-	// for (int i=0; i<pkg_len; i++) {
-	// 	printf("%02X", buf[i]);
-	// }
-    // printf("\n");
+	printf("\n-----*******send*******-------\n");
+	for (int i=0; i<pkg_len; i++){
+		printf("%02X", buf[i]);
+	}
+    printf("\n");
 	Send((char*)&buf, sizeof(buf));
 	int relen = 0;
 	int ret1 = read_pkg(redata);
@@ -156,12 +156,12 @@ int finger::SendToUart(uint8_t confir,uint8_t flag, uint8_t* body, uint16_t len,
 		UartHead *pkghead = (UartHead *)redata;
 		uint8_t *body = (uint8_t *)&pkghead->confir;
 		relen = ntohs(pkghead->headlen) + 9;
-		// printf("\n-----*******recive*******-------\n");
-		// for(int i = 0;i<relen;i++)
-		// {
-		// 	printf("%02X",redata[i]);
-		// }
-		// printf("\n");
+		printf("\n-----*******recive*******-------\n");
+		for(int i = 0;i<relen;i++)
+		{
+			printf("%02X",redata[i]);
+		}
+		printf("\n");
 	}
 	return relen;
 }
@@ -401,10 +401,6 @@ void finger::run()
 			}
 		}
 		sleep(2);
-        // PS_GetImage();
-        // usleep(10 * 1000);
-        // Process_Finger();
-        // usleep(200 * 1000);
     }
     return;
 }

@@ -196,7 +196,7 @@ int yf_param::updata_open_delay(int open_delay)
 }
 int yf_param::open_door()
 {
-    system("aplay /home/res/audio/startup.wav");
+    system("aplay /home/sound/on.wav");
     return 0;
 }
 int yf_param::add_user(int user_id)
@@ -277,7 +277,6 @@ int yf_param::finger_uart_main()
     if(g_finger)
     {
         g_finger->start();
-
     }
 }
 int yf_param::linux_event_main()
@@ -303,8 +302,7 @@ int yf_param::finger_opendoor(int fingerid)
             time_t setTime;
             time(&setTime);
             add_record(user_id,1,setTime);
-        }
-        
+        }        
     }
     g_pDB->CloseDB();
 }
@@ -337,18 +335,31 @@ int yf_param::add_user_by_finger(int userid,int fingerid)
     g_yf->g_pDB->CloseDB();
     return ret;
 }
-// int yf_param::(int user_id)
-// {
-//     g_yf->g_pDB->GetItemByFingerId(finger_id,p_user_data);
-//     if(p_user_data.size())
-//     {
-//         g_yf->open_door();
-//         const char *card;
-//         int user_id;
-//         for (const auto &cell : p_user_data)
-//         {
-//             user_id = cell.user_id;
-//             card = cell.card_num.c_str();
-//         }
-//     }
-// }
+int yf_param::add_user_by_card(int user_id,char *cardnum)
+{
+    int ret = 0;
+    std::list<user_data> p_user_data;
+    p_user_data.clear();
+    g_yf->g_pDB->OpenDB();
+    g_yf->g_pDB->GetItemByUserId(user_id,p_user_data);
+    if(p_user_data.size())
+    {
+        const char *card;
+        for (const auto &cell : p_user_data)
+        {
+            card = cell.card_num.c_str();
+        }
+        if( 0 != strcmp(card,cardnum))
+        {
+            ret = g_yf->g_pDB->UpdateCard(user_id,(char*)card);
+        }
+    }
+    else
+    {
+        char data[90]={0};
+        sprintf(data, "INSERT INTO tb_user_data(user_id,card_num,finger_id) VALUES(%d,'%s',0);", user_id,cardnum);
+        int ret = g_yf->g_pDB->insertData(data);
+    }
+    g_yf->g_pDB->CloseDB();
+    return ret;
+}

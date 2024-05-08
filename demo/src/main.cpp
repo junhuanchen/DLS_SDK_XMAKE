@@ -10,7 +10,7 @@
 #include "linux_uart.h"
 #include "yefiot.h"
 #include "event.h"
-
+// #include "net.h"
 yf_param *g_yf = NULL;
 
 // pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -19,11 +19,11 @@ yf_param *g_yf = NULL;
 int main(void)
 {
     test_log();
+    // getdevip();
     g_yf = new yf_param();
     printf("DLS Hello World!\n");
     puts(SQLITE_VERSION);
     g_yf->getparameter();
-    
     
     while(1)
     {

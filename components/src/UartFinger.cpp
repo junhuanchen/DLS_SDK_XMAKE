@@ -236,6 +236,7 @@ int UartFinger::uart_read_bytes(uint8_t *buffer, int len, uint16_t time_out) {
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(m_fd, &readfds);
+        // printf("m_fd:%d\n",m_fd);
         struct timeval timeout;
         timeout.tv_sec = time_out;  // 设置超时时间为5秒
         timeout.tv_usec = 0;

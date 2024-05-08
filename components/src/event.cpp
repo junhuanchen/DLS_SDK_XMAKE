@@ -18,18 +18,18 @@ extern event *g_event;
 // int function = 0;//按键功能 0|添加用户
 
 enum KeycodePassword{
-	KEY_ZERO = 115, //数字1
-	KEY_ONE = 114,
-	KEY_TWO = 139,
-	KEY_THREE = 128,
-	KEY_FOUR = 28,
-	KEY_FIVE = 112,
-	KEY_SIX = 6,
-	KEY_SEVEN = 7,
-	KEY_EIGHT = 8,
-	KEY_NINE = 9,
-	KEY_POUND = 102,// # 号键
-	// KEY_KPASTERISK = 97,// * 号键
+	KEY_ZERO = 111, //数字1
+	KEY_ONE = 110,
+	KEY_TWO = 109,
+	KEY_THREE = 108,
+	KEY_FOUR = 107,
+	KEY_FIVE = 106,
+	KEY_SIX = 105,
+	KEY_SEVEN = 104,
+	KEY_EIGHT = 103,
+	KEY_NINE = 102,
+	KEY_POUND = 101,// # 号键
+	KEY_STAR = 100,// * 号键
 };
 struct _ts_
 {
@@ -87,7 +87,7 @@ int event::keycode_to_password(int keycode) {
 	    case KEY_EIGHT: return 8;
 	    case KEY_NINE: return 9;
         case KEY_POUND: return 10;
-        // case KEY_KPASTERISK: return 11;
+        case KEY_STAR: return 11;
         default: return -1;
     }
 }
@@ -130,6 +130,7 @@ void event::run()
                     if(event.value == 1)
                     {
                         int digit = keycode_to_password(event.code);
+                        printf("code:%d\n",event.code);
                         printf("digit:%d\n",digit);
                         printf("state:%d\n",state);
                         if(digit != -1)
@@ -151,7 +152,7 @@ void event::run()
                                 count++;
                                 if(count == 4)
                                 {
-                                    printf("password:%s\n",password);
+                                    printf("password:%s psw:%s\n",password,g_yf->opendoor_psw);
                                     if(0 == strcmp(password,g_yf->opendoor_psw))
                                     {
                                         g_yf->open_door();                       
@@ -169,7 +170,7 @@ void event::run()
                                 count++;
                                 if(count == 6)
                                 {
-                                    printf("setpassword:%s\n",password);
+                                    printf("setpassword:%s  setpsw:%s\n",password,g_yf->set_psw);
                                     if(0 == strcmp(password,g_yf->set_psw))
                                     {
                                         state = 2;
@@ -185,6 +186,7 @@ void event::run()
                                 count = 0;
                                 memset(password,0,sizeof(password));
                                 state = 3;
+                                
                                 // return digit;
                             }
                             else if(state == 3)
@@ -254,8 +256,17 @@ void event::run()
                                         }
                                         break;
                                     case 7: //设置增加卡
+                                        // if()
+                                        // {
+                                        //     function = 1;
+                                        // }                                        
                                         break;
                                     case 8: //设置删除卡
+                                        // if()
+                                        // {
+                                        //     function = 3;
+                                        //     sleep(2);
+                                        // }                                                                               
                                         break;
                                     case 9: //修改编程密码
                                         if(count == 6)
