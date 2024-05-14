@@ -1,8 +1,9 @@
 set_project("CPP_Xmake_Env_Template")
 set_languages("c99", "cxx17")
 
+--提示 xmake project -k cmake
 --配置 armv7 v83x v85x 工具链，恢复本机编译用 xmake f -c -y 
---命令：xmake f -v -y -p linux -a armv7 --toolchain=armv7-toolchain --cross=arm-openwrt-linux-muslgnueabi-
+--命令：xmake f -m debug -v -y -p linux -a armv7 --toolchain=armv7-toolchain --cross=arm-openwrt-linux-muslgnueabi-
 toolchain("armv7-toolchain")
     set_kind("standalone")
     set_sdkdir(string.format("%s/armv7-toolchain/toolchain", os.getenv("PWD")))
@@ -12,7 +13,11 @@ toolchain_end()
 -- 模式切换：xmake f -m debug/release
 add_rules("mode.debug", "mode.release")
 
-add_requires("sqlite3")
+set_policy("check.auto_ignore_flags", false)
+
+-- add_requires("sqlite3")
+
+-- add_requires("nng ~1.7.3", {configs = {NNG_TRANSPORT_ZEROTIER = false, static = true}})
 
 -- 程序检查工具 --
 -- 命令：xmake f -m debug -v --policies=build.sanitizer.address,build.sanitizer.undefined

@@ -41,6 +41,7 @@
 - 构建项目：`xmake build`
   - 构建生成的文件位于  `Build/linux/<Arch>/<Mode>`目录下
 - 切换构建模式：`xmake -m <debug/release>`
+- xmake project -k cmake 生成cmake项目
 
 ### 2、使用CppCheck
 

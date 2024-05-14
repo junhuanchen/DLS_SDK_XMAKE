@@ -3,9 +3,11 @@ add_rules("mode.debug", "mode.release")
 target("demo")
     set_kind("binary")
     add_deps("components")
-    -- add_files("src/*.cpp")
-    add_files("src/*.c")
+    add_deps("sample_dls")
+    add_files("src/*.cpp")
+    add_packages("nng")
     add_packages("sqlite3")
+
 --
 -- If you want to known more usage about xmake, please see https://xmake.io
 --

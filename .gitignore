@@ -34,4 +34,6 @@
 # 构建文件
 build/
 .xmake/
-toolchain
+armv7-toolchain
+.vscode
+CMakeLists.txt
