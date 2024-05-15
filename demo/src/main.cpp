@@ -135,10 +135,10 @@ public:
     {
         CloseFinger();
         bool b = OpenUartFinger(2,braud,8,'N',1);
-        if(b) 
-            printf("open rc522 success!\n");
-        else 
-            printf("open rc522 fail!\n");
+        // if(b) 
+        //     printf("open rc522 success!\n");
+        // else 
+        //     printf("open rc522 fail!\n");
         return b;
     }
 
@@ -203,8 +203,8 @@ public:
         // sleep(1);
         // int ret = uart_read_bytes((uint8_t*)&val, 1, 1);
         int ret = Recv((uint8_t*)&val, 1);
-        if (ret == 1)
-            printf("r: 0x%02x, 0x%02x\n", addr, val);
+        // if (ret == 1)
+        //     printf("r: 0x%02x, 0x%02x\n", addr, val);
         // else
         //     printf("Error de lectura en: %02x\n", addr);
         if (ret != 1)
@@ -219,6 +219,12 @@ public:
 
     void reset()
     {
+        // 复位逻辑
+
+        system("echo PC2 1 > /sys/kernel/debug/sunxi_pinctrl/function && echo PC2 0 > /sys/kernel/debug/sunxi_pinctrl/data");
+        usleep(500*1000);
+        system("echo PC2 1 > /sys/kernel/debug/sunxi_pinctrl/function && echo PC2 1 > /sys/kernel/debug/sunxi_pinctrl/data");
+
         printf("reset rc522\n");
         if (!writeRegister(CommandReg, PCD_RESETPHASE))
         {
@@ -586,8 +592,10 @@ public:
         reset();
         while (m_bRun)
         {
+            // usleep(100*1000);
+
             int sector_now = 8;
-            printf("sector_now\r\n");
+            printf("sector_now %d\r\n", sector_now);
 
             int status = 0;
             int TagType = 0;
@@ -653,30 +661,29 @@ public:
                         printf("\r\n");
                     }
 
-                    data.clear();
-                    for (int i = 0; i < 16; i++)
-                    {
-                        data.push_back(0xFF);
-                    }
-                    MFRC522_Write(sector_now, data);
+                    // data.clear();
+                    // for (int i = 0; i < 16; i++)
+                    // {
+                    //     data.push_back(0xFF);
+                    // }
+                    // MFRC522_Write(sector_now, data);
 
-                    data = MFRC522_Read(sector_now);
-                    if (data.size() > 0)
-                    {
-                        printf("Sector[%d] ", data[0]);
-                        for (int i = 1; i < data.size(); i++)
-                        {
-                            printf("%02X ", data[i]);
-                        }
-                        printf("\r\n");
-                    }
+                    // data = MFRC522_Read(sector_now);
+                    // if (data.size() > 0)
+                    // {
+                    //     printf("Sector[%d] ", data[0]);
+                    //     for (int i = 1; i < data.size(); i++)
+                    //     {
+                    //         printf("%02X ", data[i]);
+                    //     }
+                    //     printf("\r\n");
+                    // }
 
                     MFRC522_StopCrypto1();
                 }
 
-                break;
+                // break;
             }
-
         }
         return;
     }
