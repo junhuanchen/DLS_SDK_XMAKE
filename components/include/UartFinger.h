@@ -45,6 +45,8 @@ public:
      
      int Recv(char *pData,int size);
      int Send(char *pData,int size);
+     int Recv(uint8_t *pData,int size);
+     int Send(uint8_t *pData,int size);
 
     //  int wait_uart_data(uint8_t time_out) ;
     //  int uart_read_data_noblock(uint8_t *buf, int len, uint16_t time_out);

@@ -35,7 +35,7 @@ int UartFinger::set_opt(int fd, int nSpeed, int nBits, char nEvent, int nStop) {
     //     fprintf(stderr, "tcgetattr( fd,&oldtio) -> %d\n", tcgetattr(fd, &oldtio));
     //     return -1;
     // }
-    printf("tcgetattr( fd,&oldtio):%d\n",tcgetattr(fd, &oldtio));
+    // printf("tcgetattr( fd,&oldtio):%d\n",tcgetattr(fd, &oldtio));
     bzero(&newtio, sizeof ( newtio));
     /*步骤一，设置字符大小*/
     newtio.c_cflag |= CLOCAL | CREAD;
@@ -143,7 +143,7 @@ int UartFinger::set_opt(int fd, int nSpeed, int nBits, char nEvent, int nStop) {
         fprintf(stderr, "com set error");
         return -1;
     }
-    fprintf(stderr, "set done!\n");
+    // fprintf(stderr, "set done!\n");
     return 0;
 }
 
@@ -197,14 +197,40 @@ void UartFinger::CloseFinger() {
     }
 }
 
+int UartFinger::Recv(uint8_t *pData, int size) {
+    if (m_fd == 0) {
+        fprintf(stderr, "Open:Read Uart  Error\n");
+        return 0;
+    }
+    int res = read(m_fd, pData, size);
+    // printf("rev:%d\n",res);
+    // printf("pData:%s\n",pData);
+    return res;
+
+}
+int UartFinger::Send(uint8_t *pData, int size) {
+
+    if (m_fd == 0) {
+        fprintf(stderr, "Open:Write Uart  Error\n");
+        return 0;
+    }
+    int res = write(m_fd, pData, size);
+    // printf("res:%d\n",res);
+    if (res == 0) {
+        fprintf(stderr, "Write Uart read Error\n");
+        return 0;
+    }
+    return res;
+}
+
 int UartFinger::Recv(char *pData, int size) {
     if (m_fd == 0) {
         fprintf(stderr, "Open:Read Uart  Error\n");
         return 0;
     }
     int res = read(m_fd, pData, size);
-    printf("rev:%d\n",res);
-    printf("pData:%s\n",pData);
+    // printf("rev:%d\n",res);
+    // printf("pData:%s\n",pData);
     return res;
 
 }
