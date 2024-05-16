@@ -600,7 +600,7 @@ extern "C"
 #endif
 
 // echo "tcp://0.0.0.0:1028,tcp://0.0.0.0:2810,tcp://0.0.0.0:1028,tcp://0.0.0.0:2810,stop" > /tmp/sample_dls.cfg
-// echo "tcp://0.0.0.0:1030,tcp://0.0.0.0:2812,tcp://0.0.0.0:1031,tcp://0.0.0.0:2813,work" > /tmp/sample_dls.cfg
+// echo "tcp://0.0.0.0:1030,tcp://0.0.0.0:2812,tcp://0.0.0.0:1031,tcp://0.0.0.0:2813,work"
 int dnng_main(int argc, char **argv)
 {
     system("cat /dev/zero > /dev/fb0");
