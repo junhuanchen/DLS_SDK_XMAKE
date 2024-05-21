@@ -2,6 +2,7 @@ add_rules("mode.debug", "mode.release")
 
 target("demo")
     set_kind("binary")
+    add_includedirs("include", {public = true})
     add_deps("components")
     add_deps("sample_dls")
     add_files("src/*.cpp")

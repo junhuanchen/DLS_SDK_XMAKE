@@ -1,4 +1,6 @@
 
+#include "watchdog.h"
+
 int main(int argc, char **argv)
 {
     extern int dhv_main(int argc, char **argv);

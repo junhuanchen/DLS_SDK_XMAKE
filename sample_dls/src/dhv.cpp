@@ -189,6 +189,17 @@ extern "C"
         nng::socket *video_send = nullptr;//video_send;// = nng::push::open();
         nng::socket *video_recv = nullptr;//video_recv;// = nng::pull::open();
 
+        uint16_t audio_send_state = 0;
+        uint16_t audio_recv_state = 0;
+        uint16_t video_send_state = 0;
+        uint16_t video_recv_state = 0;
+
+        void sample_socket_loop()
+        {
+            // 将链接状态写入到 /tmp/sample_socket
+            string_write_file("/tmp/sample_socket", string_format("[%04hx,%04hx,%04hx,%04hx]", audio_send_state, audio_recv_state, video_send_state, video_recv_state));
+        }
+
         ~_sample_socket_()
         {
             if (audio_send)
@@ -232,7 +243,9 @@ extern "C"
 
     static int sample_sock_audio_send(uint8_t *data, int size)
     {
-        if (!cfgs->has_cfg) { usleep(50*1000); return -1; }
+        sockets->audio_send_state = 0;
+
+        if (!cfgs->has_cfg) { usleep(40*1000); return -1; }
         
         PRINT_LOG("sample_sock_audio_send size = %d\n", size);
         if (sockets->audio_send == nullptr)
@@ -243,16 +256,18 @@ extern "C"
         {
             if (!sockets->audio_send->Connect(cfgs->audio_send_ip, cfgs->audio_send_port))
             {
-                PRINT_LOG("Connect %s:%s failed\n", cfgs->audio_send_ip.c_str(), cfgs->audio_send_port.c_str());
+                PRINT_LOG("Connect %s:%s failed\n", cfgs->audio_send_ip.c_str(), cfgs->audio_send_port.c_str());        
+                sockets->audio_send_state = 0;
                 return -1;
             }
-            sockets->audio_send->SetSndTimeout(50);
+            sockets->audio_send->SetSndTimeout(40);
             PRINT_LOG("Connect %s:%s success\n", cfgs->audio_send_ip.c_str(), cfgs->audio_send_port.c_str());
         }
         int ret = sockets->audio_send->Send((const char*)data, size);
         if (!ret)
         {
             PRINT_LOG("Send %s:%s failed\n", cfgs->audio_send_ip.c_str(), cfgs->audio_send_port.c_str());
+            sockets->audio_send_state = 0;
             return -1;
         }
         PRINT_LOG("Send success %s:%s %d\n", cfgs->audio_send_ip.c_str(), cfgs->audio_send_port.c_str(), ret);
@@ -266,13 +281,15 @@ extern "C"
         //         puts("reconnect sample_sock_audio_send");
         //     }
         // }
+        
+        sockets->audio_send_state = 1;
 
         return size;
     }
 
     static int sample_sock_audio_recv(uint8_t *data, int size)
     {
-        if (!cfgs->has_cfg) { usleep(50*1000); return -1; }
+        if (!cfgs->has_cfg) { usleep(40*1000); return -1; }
         
         PRINT_LOG("sample_sock_audio_recv size = %d\n", size);
         if (sockets->audio_recv == nullptr)
@@ -282,17 +299,18 @@ extern "C"
 
         if(sockets->audio_ConnectedClient == INVALID_SOCKET)
         {
-            int ret = sockets->audio_recv->Listen(sockets->audio_ConnectedClient, 50);
+            int ret = sockets->audio_recv->Listen(sockets->audio_ConnectedClient, 40);
             if (!ret)
             {
                 PRINT_LOG("Listen %s failed\n", cfgs->audio_recv_port.c_str());
+                sockets->audio_recv_state = 0;
                 return -1;
             }
-            // sockets->audio_recv->SetRcvTimeout(sockets->audio_ConnectedClient, 50);
+            // sockets->audio_recv->SetRcvTimeout(sockets->audio_ConnectedClient, 40);
             PRINT_LOG("Listen %s success\n", cfgs->audio_recv_port.c_str());
         }
 
-        int ret = ASocket::SelectSocket(sockets->audio_ConnectedClient, 50);
+        int ret = ASocket::SelectSocket(sockets->audio_ConnectedClient, 40);
         if (ret > 0)
         {
             int read_size = sockets->audio_recv->Receive(sockets->audio_ConnectedClient, (char *)data, size, false);
@@ -302,6 +320,7 @@ extern "C"
                 sockets->audio_ConnectedClient = INVALID_SOCKET;
                 // delete sockets->audio_recv;
                 // sockets->audio_recv = nullptr;
+                sockets->audio_recv_state = 0;
                 return -1;
             }
             size = read_size;
@@ -310,12 +329,14 @@ extern "C"
         
         // {
         //     static int cnt = 0;
-        //     if (++cnt > 50)
+        //     if (++cnt > 40)
         //     {
         //         cnt = 0;
         //         sockets->audio_recv->Disconnect(sockets->audio_ConnectedClient);
         //     }
         // }
+
+        sockets->audio_recv_state = 1;
 
         return size;
     }
@@ -324,7 +345,7 @@ extern "C"
     {
         try
         {
-            if (!cfgs->has_cfg) { usleep(50*1000); return -1; }
+            if (!cfgs->has_cfg) { usleep(40*1000); return -1; }
                 
             if (!sockets->video_send)
             {
@@ -344,10 +365,14 @@ extern "C"
             // CALC_FPS("sample_sock_video_send");
 
             PRINT_LOG("sample_sock_video_send %d\n", size);
+            
+            sockets->video_send_state = 1;
+            
         }
         catch (const nng::exception &e)
         {
-            PRINT_LOG("video_push %s: %s\n", e.who(), e.what());
+            PRINT_LOG("sample_sock_video_send %s: %s\n", e.who(), e.what());
+            sockets->video_send_state = 0;
             return -1;
         }
         return 0;
@@ -357,7 +382,7 @@ extern "C"
     {
         try
         {
-            if (!cfgs->has_cfg) { usleep(50*1000); return -1; }
+            if (!cfgs->has_cfg) { usleep(40*1000); return -1; }
         
             if (!sockets->video_recv)
             {
@@ -368,21 +393,23 @@ extern "C"
                 nng::set_opt_reconnect_time_min(*sockets->video_recv, 10);
                 nng::set_opt_reconnect_time_max(*sockets->video_recv, 10);
                 std::string video_recv_addr = string_format("tcp://%s:%s", cfgs->video_recv_ip.c_str(), cfgs->video_recv_port.c_str());
-                PRINT_LOG("video_recv_addr: %s\n", video_recv_addr.c_str());
+                printf("video_recv_addr: %s\n", video_recv_addr.c_str());
                 sockets->video_recv->listen(video_recv_addr.c_str());
                 return -1;
             }
-            
+
             size = sockets->video_recv->recv(nng::view(data, size));
 
             // CALC_FPS("sample_sock_video_recv");
             
             PRINT_LOG("sample_sock_video_recv %d\n", size);
 
+            sockets->video_recv_state = 1;
         }
         catch (const nng::exception &e)
         {
-            PRINT_LOG("video_pull %s: %s\n", e.who(), e.what());
+            PRINT_LOG("sample_sock_video_recv %s: %s\n", e.who(), e.what());
+            sockets->video_recv_state = 0;
             return -1;
         }
         return size;
@@ -422,7 +449,8 @@ int dhv_main(int argc, char **argv)
 
     while (!get_sample_nng_exit_flag())
     {
-        usleep(1000 * 1000);
+        usleep(250 * 1000);
+        sockets->sample_socket_loop();
         cfgs->sample_cfg_loop();
     }
 
