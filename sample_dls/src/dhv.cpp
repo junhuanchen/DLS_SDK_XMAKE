@@ -2,6 +2,7 @@
 #include "sample_common.h"
 
 #include <unistd.h>
+#include <sys/time.h>
 #include <string>
 #include <sstream>
 #include <list>
@@ -47,6 +48,13 @@ void string_write_file(std::string path, std::string txt)
     outfile << txt;
     outfile.flush();
     outfile.close();
+}
+
+static int64_t get_time_ms()
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 
 std::string string_read_file(const std::string &path)
@@ -131,7 +139,6 @@ struct _sample_cfg_
                 if (user_data == "exit")
                 {
                     sample_cfg_exit();
-                    extern void sample_nng_signalHandler(int signum);
                     sample_nng_signalHandler(0);
                 }
                 else if (user_data == "load")
@@ -168,6 +175,8 @@ struct _sample_cfg_
 
 extern "C"
 {
+    extern void sample_nng_signalHandler(int signum);
+
     auto audioLogPrinter = [](const std::string &strLogMsg)
     {
         return;
@@ -189,15 +198,87 @@ extern "C"
         nng::socket *video_send = nullptr;//video_send;// = nng::push::open();
         nng::socket *video_recv = nullptr;//video_recv;// = nng::pull::open();
 
-        uint16_t audio_send_state = 0;
-        uint16_t audio_recv_state = 0;
-        uint16_t video_send_state = 0;
-        uint16_t video_recv_state = 0;
+        uint16_t DLS_VO = 0;
+        uint16_t DLS_VI = 0;
+
+        uint8_t audio_send_state = 0;
+        uint8_t audio_recv_state = 0;
+        uint8_t video_send_state = 0;
+        uint8_t video_recv_state = 0;
+
+        int32_t sample_sock_sum = 0;
+        int64_t audio_send_old = 0;
+        int64_t audio_recv_old = 0;
+        int64_t video_send_old = 0;
+        int64_t video_recv_old = 0;
+        int64_t sample_sock_new = 0;
+        
+        _sample_socket_()
+        {
+            sample_sock_new = get_time_ms();
+            audio_send_old = sample_sock_new;
+            audio_recv_old = sample_sock_new;
+            video_send_old = sample_sock_new;
+            video_recv_old = sample_sock_new;
+        }
 
         void sample_socket_loop()
         {
             // 将链接状态写入到 /tmp/sample_socket
             string_write_file("/tmp/sample_socket", string_format("[%04hx,%04hx,%04hx,%04hx]", audio_send_state, audio_recv_state, video_send_state, video_recv_state));
+            // 可检查工作状态，如果状态从 1 到 0 的过程中时间超过了 3 秒，可以认为链接断开，主动退出程序，并期望管理程序重新创建对讲进程。
+            return ; // 备用超时逻辑，用于主动退出对讲无法连接或异常连接的情况。
+
+            sample_sock_new = get_time_ms();
+            if (audio_send_state == 1)
+            {
+                audio_send_old = sample_sock_new;
+                sample_sock_sum = 0;
+            }
+            if (audio_recv_state == 1)
+            {
+                audio_recv_old = sample_sock_new;
+                sample_sock_sum = 0;
+            }
+            if (DLS_VI && video_send_state == 1)
+            {
+                video_send_old = sample_sock_new;
+                sample_sock_sum = 0;
+            }
+            if (DLS_VO && video_recv_state == 1)
+            {
+                video_recv_old = sample_sock_new;
+                sample_sock_sum = 0;
+            }
+            if ((sample_sock_new - audio_send_old) > 2000)
+            {
+                PRINT_LOG("audio_send_state timeout = %d\n", audio_send_state);
+                audio_send_old = sample_sock_new;
+                sample_sock_sum += 1;
+            }
+            if ((sample_sock_new - audio_recv_old) > 2000)
+            {
+                PRINT_LOG("audio_recv_state timeout = %d\n", audio_recv_state);
+                audio_recv_old = sample_sock_new;
+                sample_sock_sum += 1;
+            }
+            if (DLS_VI && (sample_sock_new - video_send_old) > 2000)
+            {
+                PRINT_LOG("video_send_state timeout = %d\n", video_send_state);
+                video_send_old = sample_sock_new;
+                sample_sock_sum += 1;
+            }
+            if (DLS_VO && (sample_sock_new - video_recv_old) > 2000)
+            {
+                PRINT_LOG("video_recv_state timeout = %d\n", video_recv_state);
+                video_recv_old = sample_sock_new;
+                sample_sock_sum += 1;
+            }
+            if (sample_sock_sum > 5) // 超时的任务过多，并且没有修正过来，可以选择退出
+            {
+                printf("sample_sock_sum timeout = %d > 5 \n", sample_sock_sum);
+                sample_nng_signalHandler(0);
+            }
         }
 
         ~_sample_socket_()
@@ -422,19 +503,17 @@ int dhv_main(int argc, char **argv)
     system("cat /dev/zero > /dev/fb0");
     PRINT_LOG("Hello, dhv_main!\n");
 
-    int DLS_VO = 0;
-    int DLS_VI = 0;
     if (argc == 3)
     {
-        DLS_VO = atoi(argv[1]);
-        DLS_VI = atoi(argv[2]);
+        sockets->DLS_VO = atoi(argv[1]);
+        sockets->DLS_VI = atoi(argv[2]);
     }
     else
     {
-        DLS_VO = 0;
-        DLS_VI = 0;
+        sockets->DLS_VO = 0;
+        sockets->DLS_VI = 0;
     }
-    PRINT_LOG("DLS_VO = %d, DLS_VI = %d\n", DLS_VO, DLS_VI);
+    PRINT_LOG("DLS_VO = %d, DLS_VI = %d\n", sockets->DLS_VO, sockets->DLS_VI);
 
     int sample_sock_audio_recv(uint8_t *data, int size);
     int sample_sock_audio_send(uint8_t *data, int size);
@@ -445,7 +524,7 @@ int dhv_main(int argc, char **argv)
     set_sample_dls_audio_callback(sample_sock_audio_send, sample_sock_audio_recv);
     set_sample_dls_video_callback(sample_sock_video_send, sample_sock_video_recv);
 
-    sample_nng_load(DLS_VO, DLS_VI);
+    sample_nng_load(sockets->DLS_VO, sockets->DLS_VI);
 
     while (!get_sample_nng_exit_flag())
     {
@@ -454,7 +533,9 @@ int dhv_main(int argc, char **argv)
         cfgs->sample_cfg_loop();
     }
 
-    sample_nng_free(DLS_VO, DLS_VI);
+    sample_nng_free(sockets->DLS_VO, sockets->DLS_VI);
 
     return 0;
 }
+
+// export IP=0.0.0.0 && echo '["'$IP':1030","'$IP':2812","0.0.0.0:1030","0.0.0.0:2812","load"]' > /tmp/sample_cfg.json && cd /root/bin && ./demo 0 0
