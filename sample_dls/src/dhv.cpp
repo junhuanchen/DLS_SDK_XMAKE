@@ -73,6 +73,7 @@ struct _sample_cfg_
 {
     bool is_load = false;
     bool has_cfg = false;
+    int capture = false;
 
     std::string audio_recv_ip;
     std::string audio_recv_port;
@@ -144,6 +145,10 @@ struct _sample_cfg_
                 else if (user_data == "load")
                 {
                     sample_cfg_load(audio_send_addr, video_send_addr, audio_recv_addr, video_recv_addr);
+                }
+                else if (user_data == "capture")
+                {
+                    capture = 3; // 抓拍次数
                 }
             }
             catch (json5pp::syntax_error e)
@@ -427,7 +432,14 @@ extern "C"
         try
         {
             if (!cfgs->has_cfg) { usleep(40*1000); return -1; }
-                
+            
+            if (cfgs->capture > 0)
+            {
+                PRINT_LOG("sample_sock_video_send capture\n");
+                string_write_file(string_format("./captur_%d.jpg", cfgs->capture), std::string((char *)data, size));
+                cfgs->capture -= 1;
+            }
+
             if (!sockets->video_send)
             {
                 sockets->video_send = new nng::socket();
@@ -538,4 +550,14 @@ int dhv_main(int argc, char **argv)
     return 0;
 }
 
-// export IP=0.0.0.0 && echo '["'$IP':1030","'$IP':2812","0.0.0.0:1030","0.0.0.0:2812","load"]' > /tmp/sample_cfg.json && cd /root/bin && ./demo 0 0
+// 全功能测试
+// export IP=0.0.0.0 && echo '["'$IP':1030","'$IP':2812","0.0.0.0:1030","0.0.0.0:2812","load"]' > /tmp/sample_cfg.json && cd /root/bin && ./demo 1 1
+
+// 触发抓拍（默认 3 张）
+// export IP=0.0.0.0 && echo '["'$IP':1030","'$IP':2812","0.0.0.0:1030","0.0.0.0:2812","capture"]' > /tmp/sample_cfg.json
+
+// 后板配置 192.168.1.1
+// export IP=192.168.1.2 && echo '["'$IP':1030","'$IP':2812","0.0.0.0:1030","0.0.0.0:2812","load"]' > /tmp/sample_cfg.json && cd /root/bin && ./demo 1 0
+
+// 前板配置 192.168.1.2
+// export IP=192.168.1.1 && echo '["'$IP':1030","'$IP':2812","0.0.0.0:1030","0.0.0.0:2812","load"]' > /tmp/sample_cfg.json && cd /root/bin && ./demo 0 1
