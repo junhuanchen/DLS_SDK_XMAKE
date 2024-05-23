@@ -77,3 +77,17 @@ static void _watchdog_feed(void)
         return;
     }
 }
+
+
+// V85X 看门狗测试，若不喂狗后，三秒后重启 chmod 777 demo && ./demo
+
+void watchdog_test(void)
+{
+    _watchdog_init(3);
+    for (int i = 0; i < 5; i++)
+    {
+        _watchdog_feed();
+        sleep(1);
+        printf("_watchdog_feed\n");
+    }
+}
