@@ -9,6 +9,14 @@
 #include <condition_variable>
 #include <fstream>
 #include <iostream>
+#include <regex>
+#include <string>
+#include <vector>
+#include <numeric>
+#include <array>
+#include <memory>
+#include <chrono>
+
 #include "json5pp.hpp"
 
 #include "hv/TcpServer.h"
@@ -71,6 +79,53 @@ std::string string_read_file(const std::string &path)
     std::stringstream ss;
     ss << file.rdbuf();
     return ss.str();
+}
+
+extern "C" 
+{
+
+    int AW_MPI_AI_SuspendAns(int AudioDevId);
+    int AW_MPI_AI_ResumeAns(int AudioDevId);
+    int AW_MPI_AI_SuspendAec(int AudioDevId);
+    int AW_MPI_AI_ResumeAec(int AudioDevId);
+    int AW_MPI_AI_SetAgcDb(int AudioDevId, float fDbGain);
+    int AW_MPI_AI_GetAgcDb(int AudioDevId, float *pfDbGain);
+
+    void* AgcDbGainAdjustThread(void* argv)
+    {
+        int *exitFlag = (int*)argv;
+        char buf[32] = {0};
+        char *ptr;
+
+        while (!*exitFlag) {
+            fgets(buf, 32, stdin);
+            // setdbgain -5 (-30~0)
+            ptr = buf;
+            while(*ptr++ != ' ' && *ptr != '\n');
+            if (!strncmp(buf, "setdbgain", 10)) {
+                AW_MPI_AI_SetAgcDb(0, atof(ptr));
+            } else if (!strncmp(buf, "getdbgain", 9)) {
+                float dbgain;
+                AW_MPI_AI_GetAgcDb(0, &dbgain);
+                printf("getAgcDbGain: %f", dbgain);
+            } else if (!strncmp(buf, "aec_on", 6)) {
+                AW_MPI_AI_ResumeAec(0);
+            } else if (!strncmp(buf, "aec_off", 7)) {
+                AW_MPI_AI_SuspendAec(0);
+            } else if (!strncmp(buf, "ans_on", 6)) {
+                AW_MPI_AI_ResumeAns(0);
+            } else if (!strncmp(buf, "ans_off", 7)) {
+                AW_MPI_AI_SuspendAns(0);
+            } else {
+                printf("unknow cmd: %s!", buf);
+                // printf("help: setdbgain x for set agc db gain");
+                // printf("      getdbgain for get agc db gain value");
+            }
+            memset(buf, 0, 32);
+        }
+        return NULL;
+    }
+
 }
 
 extern "C" void audio_on_clear();
@@ -246,7 +301,7 @@ extern "C"
             std::array<uint8_t, 1024> tmp;
             memcpy(tmp.data(), &readbytes, sizeof(readbytes));
             memcpy(tmp.data() + sizeof(readbytes), buf, readbytes);
-            if (audio_recv_data.size() > 64) {
+            if (audio_recv_data.size() > 32) {
                 audio_recv_data.pop();
             }
             audio_recv_data.push(std::move(tmp));
@@ -511,16 +566,94 @@ extern "C"
         return size;
     }
 
-    static int sample_sock_video_send(uint8_t *data, int size)
+    /* 执行 shell 命令并返回 stdout */
+    static std::string exec_shell(const char* cmd)
     {
+        std::array<char, 256> buffer;
+        std::string result;
+        std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+        if (!pipe) return "";
+        while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
+            result += buffer.data();
+        return result;
+    }
+
+    /* 1 秒才检查一次 RSSI，其余时间直接给缓存值 */
+    static int get_avg_rssi_cached(int avg_window = 5)
+    {
+        using clock = std::chrono::steady_clock;
+        static int cached_rssi = -1;                           // 缓存值
+        static clock::time_point last_real_check{};            // 上次真实检查时刻
+        const  auto interval = std::chrono::seconds(1);
+
+        auto now = clock::now();
+        if (now - last_real_check >= interval)                 // 到点干活
+        {
+            last_real_check = now;
+
+            /* 下面和原来一样 */
+            static std::vector<int> history;
+            std::string out = exec_shell("hgpriv hg0 get sta_list");
+            std::smatch m;
+            int rssi = -1;
+            if (std::regex_search(out, m, std::regex(R"(rssi:(-?\d+))")))
+                rssi = std::stoi(m[1]);
+            if (rssi != -1)
+            {
+                history.push_back(rssi);
+                if ((int)history.size() > avg_window)
+                    history.erase(history.begin());
+            }
+            if (!history.empty())
+                cached_rssi = std::accumulate(history.begin(), history.end(), 0)
+                            / (int)history.size();
+            else
+                cached_rssi = -1;
+
+            /* 一秒只打印一次 */
+            printf("rssi_avg=%d (window=%d)\n", cached_rssi, (int)history.size());
+        }
+        return cached_rssi;
+    }
+
+    static int sample_sock_video_send(uint8_t *data, int size)
+    {    
+        static int skip_cnt = 0;                 // 持久化计数器
+        int avg_rssi = get_avg_rssi_cached(3);   // 1 秒真查一次
+        if (avg_rssi == -1) {                    // 拿不到 STA
+            usleep(40*1000);
+            return -1;
+        }
+
+        /* 1. 停发区 */
+        if (avg_rssi < -80) {                    // -90 以外直接停
+            usleep(40*1000);
+            return -1;
+        }
+
+        /* 2. 动态丢帧区：RSSI 越差，周期越大 */
+        int period = 1;                          // 默认全发
+        if (avg_rssi < -70)       period = 8;    // -80...-89 ：每 8 帧发 1 帧
+        else if (avg_rssi < -60)  period = 6;    // -70...-79 ：每 6 帧发 1 帧
+        else if (avg_rssi < -50)  period = 4;    // -60...-69 ：每 4 帧发 1 帧
+        else if (avg_rssi < -40)  period = 2;    // -50...-59 ：每 2 帧发 1 帧
+        // -40...-49 及更好：period=1，全发
+
+        if (++skip_cnt % period != 0) {          // 没到发送周期
+            usleep(40*1000);
+            return -1;
+        }
+        
+        /* 以下原逻辑未动 */
         try
         {
             if (!cfgs->has_cfg) { usleep(40*1000); return -1; }
-            
+
             if (cfgs->capture > 0)
             {
                 PRINT_LOG("sample_sock_video_send capture\n");
-                string_write_file(string_format("./captur_%d.jpg", cfgs->capture), std::string((char *)data, size));
+                string_write_file(string_format("./captur_%d.jpg", cfgs->capture),
+                                std::string((char *)data, size));
                 cfgs->capture -= 1;
             }
 
@@ -539,12 +672,12 @@ extern "C"
 
             sockets->video_send->send(nng::view(data, size));
             
-            // CALC_FPS("sample_sock_video_send");
+            CALC_FPS("sample_sock_video_send");
 
             PRINT_LOG("sample_sock_video_send %d\n", size);
             
             sockets->video_send_state = 1;
-            
+
         }
         catch (const nng::exception &e)
         {
@@ -554,7 +687,6 @@ extern "C"
         }
         return 0;
     }
-
     static int sample_sock_video_recv(uint8_t *data, int size)
     {
         try
@@ -623,6 +755,15 @@ int dhv_main(int argc, char **argv)
     printf("sample_nng_load\n");
     sample_nng_load(sockets->DLS_VO, sockets->DLS_VI);
 
+    usleep(1000 * 1000);
+
+    // pthread_t tid;
+    // int exit = 0;
+    // pthread_create(&tid, NULL, AgcDbGainAdjustThread, &exit);
+
+    // AW_MPI_AI_SuspendAec(0);
+    // AW_MPI_AI_SetAgcDb(0, 30);
+ 
     while (!get_sample_nng_exit_flag())
     {
         usleep(250 * 1000);
